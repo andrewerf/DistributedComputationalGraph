@@ -1,10 +1,6 @@
 [submodule "3rdparty/redis-plus-plus"]
 	path = 3rdparty/redis-plus-plus
 	url = https://github.com/sewenew/redis-plus-plus.git
-[submodule "3rdparty/msgpack-c"]
-	path = 3rdparty/msgpack-c
-	url = https://github.com/msgpack/msgpack-c.git
-	branch = cpp_master
 [submodule "3rdparty/rpclib"]
 	path = 3rdparty/rpclib
 	url = https://github.com/rpclib/rpclib.git
