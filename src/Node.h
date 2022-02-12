@@ -8,6 +8,7 @@
 
 
 using TID = std::uint32_t;
+using TData = clmdep_msgpack::object_bin;
 
 struct Node
 {

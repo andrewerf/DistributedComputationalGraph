@@ -17,6 +17,7 @@ class Manager
     void addGraph(TID id);
     TID addGraphUnique();
     void addNode(const Node &node);
+    void setInputValue(TID grapId, TID nodeId, const TData &data);
 
 private:
     kafka::clients::KafkaProducer producer;

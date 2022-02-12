@@ -72,3 +72,24 @@ void Manager::addNode(const Node &node)
         rpc::this_handler().respond_error(e.what());
     }
 }
+
+void Manager::setInputValue(TID graphId, TID nodeId, const TData &data)
+{
+    // Push data to redis
+    std::string redisKey = std::to_string(graphId) + "_" + std::to_string(nodeId);
+    std::string redisValue(data.ptr, data.size);
+    redisServer.set(redisKey, redisValue);
+
+    // Notify kafka
+    kafka::Value kafkaValue(redisKey.data(), redisKey.size() * sizeof(char));
+    kafka::clients::producer::ProducerRecord record("data", kafka::NullKey, kafkaValue);
+    try {
+        auto md = producer.syncSend(record);
+        PLOGV << "Input for node with id = " << nodeId << " has been set: " << md.toString();
+    }
+    catch(kafka::KafkaException &e) {
+        PLOGW << "Could not send data info to kafka: " << e.what();
+        redisServer.del(redisKey);
+        rpc::this_handler().respond_error(e.what());
+    }
+}
