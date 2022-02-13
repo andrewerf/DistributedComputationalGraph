@@ -114,7 +114,7 @@ void Graph::setReady(TID nodeId)
     {
         if(std::binary_search(otherNode.inputs.begin(), otherNode.inputs.end(), nodeId))
         {
-            auto &rcount = nodesInputsReady.at(otherNodeId);
+            auto &rcount = nodesInputsReady[otherNodeId];
             if(++rcount == otherNode.inputs.size())
                 reachableNodes.insert(otherNodeId);
         }

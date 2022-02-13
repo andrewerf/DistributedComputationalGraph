@@ -20,7 +20,7 @@ using VarTensor =
 
 VarTensor decodeTensor(TensorWithMeta &&tensorWithMeta);
 
-TensorWithMeta encodeTensor(const VarTensor &tensor);
+TensorWithMeta encodeTensor(VarTensor &&tensor);
 
 
 struct Operation
@@ -29,6 +29,11 @@ struct Operation
 };
 
 struct SumOp : public Operation
+{
+    TensorWithMeta call(std::vector<TensorWithMeta> &&encodedTensors) const override;
+};
+
+struct SqrOp : public Operation
 {
     TensorWithMeta call(std::vector<TensorWithMeta> &&encodedTensors) const override;
 };

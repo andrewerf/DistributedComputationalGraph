@@ -80,11 +80,11 @@ VarTensor decodeTensor(TensorWithMeta &&tensorWithMeta)
     }
 }
 
-TensorWithMeta encodeTensor(const VarTensor &tensor)
+TensorWithMeta encodeTensor(VarTensor &&tensor)
 {
     MetaData md;
     std::string encodedTensor = std::visit(overloaded{
-        [&md] <typename T, int rank> (Eigen::Tensor<T, rank> &t)
+        [&md] <typename T, int rank> (Eigen::Tensor<T, rank> &&t)
         {
             msgpack::sbuffer buffer;
             msgpack::pack(buffer, t);
@@ -92,11 +92,11 @@ TensorWithMeta encodeTensor(const VarTensor &tensor)
             md.dataType = to_dt<T>();
             return std::string(buffer.data(), buffer.size());
         },
-        [](const auto &t) -> std::string
+        [](auto t) -> std::string
         {
             throw std::logic_error("Trying to encode bad tensor");
         }
-    }, tensor);
+    }, std::move(tensor));
 
     return std::make_pair(std::move(encodedTensor), md);
 }
@@ -111,20 +111,42 @@ TensorWithMeta SumOp::call(std::vector<TensorWithMeta> &&encodedTensors) const
                    decodeTensor);
 
     VarTensor result;
-    for(const auto &varTensor : tensors)
+    for(auto &&varTensor : tensors)
     {
         result = std::visit(overloaded {
-            [] <typename T1, typename T2, int rank> (Eigen::Tensor<T1, rank> &&a, Eigen::Tensor<T2, rank> &&b)
+            [] <typename T, int rank> (Eigen::Tensor<T, rank> &&a, Eigen::Tensor<T, rank> &&b) -> VarTensor
             {
-                Eigen::Tensor<T1, rank> result = a + b;
+                Eigen::Tensor<T, rank> result = a;
+                result += b;
                 return result;
             },
             [](auto &&a, auto &&b) -> VarTensor
             {
-
+                throw std::logic_error("");
             }
-        }, varTensor, result);
+        }, std::move(varTensor), std::move(result));
     }
 
-    return encodeTensor(result);
+    return encodeTensor(std::move(result));
+}
+
+TensorWithMeta SqrOp::call(std::vector<TensorWithMeta> &&encodedTensors) const
+{
+    if(encodedTensors.size() != 1)
+        throw std::runtime_error("Sqr should only be called with one tensor");
+
+    VarTensor varTensor = decodeTensor(std::move(encodedTensors[0]));
+
+    VarTensor result = std::visit(overloaded {
+        [] <typename T, int rank> (Eigen::Tensor<T, rank> &&tensor) -> VarTensor
+        {
+            return tensor;
+        },
+        [](auto &&tensor) -> VarTensor
+        {
+            throw std::logic_error("");
+        }
+    }, std::move(varTensor));
+
+    return encodeTensor(std::move(result));
 }

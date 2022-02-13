@@ -15,6 +15,7 @@ Manager::Manager(const kafka::Properties &producerProps, int rpcPort, int rpcThr
 {
     rpcServer.bind("addGraph", [this](TID id){addGraph(id);});
     rpcServer.bind("addNode", [this](const Node &node){addNode(node);});
+    rpcServer.bind("setInputValue", [this](TID graphId, TID nodeId, const std::string &data, MetaData md){setInputValue(graphId, nodeId, data, md);});
     rpcServer.bind("addGraphUnique", [this]{return addGraphUnique();});
     rpcServer.bind("setNodeComputed", [this](TID graphId, TID nodeId){setNodeComputed(graphId, nodeId);});
     rpcServer.suppress_exceptions(true);
@@ -68,8 +69,9 @@ void Manager::addNode(const Node &node)
         sendNode(node);
 }
 
-void Manager::setInputValue(TID graphId, TID nodeId, const msgpack::object_bin &data, MetaData md)
+void Manager::setInputValue(TID graphId, TID nodeId, const std::string &data, MetaData md)
 {
+    PLOGV << "setInputValue called";
     std::unique_lock lock(graphsMutex);
     auto graphIt = graphs.find(graphId);
     if(graphIt == graphs.end())
@@ -78,7 +80,7 @@ void Manager::setInputValue(TID graphId, TID nodeId, const msgpack::object_bin &
 
     // Push data to redis
     std::string redisKey = std::to_string(graphId) + "_" + std::to_string(nodeId);
-    redisServer.set(redisKey, std::string(data.ptr, data.size));
+    redisServer.set(redisKey, std::string(data.c_str(), data.size()));
 
     msgpack::sbuffer encodedMeta;
     msgpack::pack(encodedMeta, md);

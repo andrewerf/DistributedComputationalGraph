@@ -1,26 +1,8 @@
 #include "Worker.h"
 #include "Operations.h"
+#include "common.h"
 
 #include <plog/Log.h>
-
-
-std::string extractHostname(const std::string &host)
-{
-    auto pos = host.find(':');
-    if(pos == std::string::npos)
-        return host;
-    else
-        return host.substr(0, pos);
-}
-
-int extractRpcPort(const std::string &host)
-{
-    auto pos = host.find(':');
-    if(pos == std::string::npos)
-        return rpc::constants::DEFAULT_PORT;
-    else
-        return std::stoi(host.substr(pos + 1));
-}
 
 
 Worker::Worker(const kafka::Properties &consumerProps, const std::string &managerRpcHost, const std::string &redisUri):
@@ -71,7 +53,7 @@ void Worker::processNode(const Node &node)
         encodedTensors.emplace_back(std::move(tensorWithMeta));
     }
 
-    SumOp op;
+    SqrOp op;
     auto result = op.call(std::move(encodedTensors));
 
     std::string redisKey = std::to_string(node.graphId) + '_' + std::to_string(node.id);
