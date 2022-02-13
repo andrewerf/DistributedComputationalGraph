@@ -16,6 +16,7 @@ Manager::Manager(const kafka::Properties &producerProps, int rpcPort, int rpcThr
     rpcServer.bind("addGraph", [this](TID id){addGraph(id);});
     rpcServer.bind("addNode", [this](const Node &node){addNode(node);});
     rpcServer.bind("addGraphUnique", [this]{return addGraphUnique();});
+    rpcServer.bind("setNodeComputed", [this](TID graphId, TID nodeId){setNodeComputed(graphId, nodeId);});
     rpcServer.suppress_exceptions(true);
 
     kafka::clients::AdminClient adminClient(producerProps);
@@ -67,7 +68,7 @@ void Manager::addNode(const Node &node)
         sendNode(node);
 }
 
-void Manager::setInputValue(TID graphId, TID nodeId, const TData &data)
+void Manager::setInputValue(TID graphId, TID nodeId, const msgpack::object_bin &data)
 {
     std::unique_lock lock(graphsMutex);
     auto graphIt = graphs.find(graphId);
@@ -91,11 +92,34 @@ void Manager::setInputValue(TID graphId, TID nodeId, const TData &data)
     }
 }
 
+void Manager::setNodeComputed(TID graphId, TID nodeId)
+{
+    std::unique_lock lock(graphsMutex);
+    auto graphIt = graphs.find(graphId);
+    if(graphIt == graphs.end())
+        throw GraphDoesNotExist(graphId);
+    lock.unlock();
+
+    std::string redisKey = std::to_string(graphId) + "_" + std::to_string(nodeId);
+    if(redisServer.exists(redisKey) == 0 /* doesn't exist */)
+        throw std::runtime_error("Data is not set");
+
+    lock.lock();
+    auto &graph = graphIt->second;
+    graph.setReady(nodeId);
+
+    // Notify kafka if some node is reachable
+    for(const auto &reachableId : graph)
+    {
+        sendNode(graph.at(reachableId));
+    }
+}
+
 void Manager::sendNode(const Node &node)
 {
     PLOGV << "sendNode called";
-    clmdep_msgpack::sbuffer encodedNode;
-    clmdep_msgpack::pack(encodedNode, node);
+    msgpack::sbuffer encodedNode;
+    msgpack::pack(encodedNode, node);
 
     kafka::Value value(encodedNode.data(), encodedNode.size());
     kafka::clients::producer::ProducerRecord record("nodes", kafka::NullKey, value);
