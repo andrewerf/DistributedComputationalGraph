@@ -13,7 +13,7 @@
 class Worker
 {
 public:
-    Worker(const kafka::Properties &consumerProps, const std::string &managerHost, int rpcPort, const std::string &redisUri);
+    Worker(const kafka::Properties &consumerProps, const std::string &managerRpcHost, const std::string &redisUri);
 
     void listen();
 

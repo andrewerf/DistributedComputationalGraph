@@ -15,6 +15,7 @@
 
 class Manager
 {
+public:
     Manager(const kafka::Properties &producerProps, int rpcPort, int rpcThreads, const std::string &redisUri);
 
     void addGraph(TID id);

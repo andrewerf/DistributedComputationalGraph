@@ -4,9 +4,28 @@
 #include <plog/Log.h>
 
 
-Worker::Worker(const kafka::Properties &consumerProps, const std::string &managerHost, int rpcPort, const std::string &redisUri):
+std::string extractHostname(const std::string &host)
+{
+    auto pos = host.find(':');
+    if(pos == std::string::npos)
+        return host;
+    else
+        return host.substr(0, pos);
+}
+
+int extractRpcPort(const std::string &host)
+{
+    auto pos = host.find(':');
+    if(pos == std::string::npos)
+        return rpc::constants::DEFAULT_PORT;
+    else
+        return std::stoi(host.substr(pos + 1));
+}
+
+
+Worker::Worker(const kafka::Properties &consumerProps, const std::string &managerRpcHost, const std::string &redisUri):
     consumer(consumerProps),
-    rpcClient(managerHost, rpcPort),
+    rpcClient(extractHostname(managerRpcHost), extractRpcPort(managerRpcHost)),
     redisServer(redisUri)
 {
     consumer.subscribe({"nodes"});
@@ -61,4 +80,6 @@ void Worker::processNode(const Node &node)
     msgpack::sbuffer encodedMeta;
     msgpack::pack(encodedMeta, result.second);
     redisServer.set(redisKey + "_meta", std::string(encodedMeta.data(), encodedMeta.size()));
+
+    rpcClient.call("setNodeComputed", node.graphId, node.id);
 }
