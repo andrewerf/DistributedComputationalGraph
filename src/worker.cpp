@@ -1,4 +1,5 @@
 #include "Worker.h"
+#include "common.h"
 
 #include <cxxopts.hpp>
 
@@ -28,6 +29,8 @@ int main(int argc, char** argv)
         std::cout << options.help() << std::endl;
         exit(0);
     }
+
+    setUpLogger(static_cast<plog::Severity>(args["verbosity"].as<int>()));
 
     kafka::Properties properties({
         {"bootstrap.servers", args["kafka_host"].as<std::string>()},
