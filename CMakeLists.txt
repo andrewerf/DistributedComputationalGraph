@@ -23,8 +23,13 @@ set(CXXOPTS_BUILD_EXAMPLES off)
 set(CXXOPTS_BUILD_TESTS off)
 add_subdirectory(3rdparty/cxxopts)
 
+# Eigen
+find_package(Eigen3 3.4 REQUIRED)
 
 set(LIBS modern-cpp-kafka-api plog cxxopts rpc redis++)
 
 add_executable(manager src/Manager.cpp)
 target_link_libraries(manager ${LIBS})
+
+add_executable(worker src/Worker.cpp src/Operations.cpp)
+target_link_libraries(worker ${LIBS} Eigen3::Eigen)

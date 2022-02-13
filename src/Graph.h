@@ -88,7 +88,7 @@ public:
 private:
     TID graphId;
     std::unordered_map<TID, Node> nodes;
-    std::unordered_map<TID, size_t> nodesInputs, nodesInputsReady;
+    std::unordered_map<TID, size_t> nodesInputsReady;
     std::unordered_set<TID> reachableNodes, readyNodes;
 };
 
@@ -100,10 +100,6 @@ void Graph::addNode(T &&node)
         throw NodeAlreadyExists();
     TID id = node.id;
 
-    for(TID outId : node.outputs)
-        nodesInputs[outId] += 1;
-
-    nodesInputs.insert({id, 0});
     nodes.insert({id, std::forward<T>(node)});
 }
 
@@ -114,11 +110,14 @@ void Graph::setReady(TID nodeId)
         throw NodeDoesNotExist(nodeId);
 
     readyNodes.insert(nodeId);
-    for(TID outId : nodeIt->second.outputs)
+    for(const auto &[otherNodeId, otherNode] : nodes)
     {
-        auto &rcount = nodesInputsReady.at(outId);
-        if(++rcount == nodesInputs.at(outId))
-            reachableNodes.insert(outId);
+        if(std::binary_search(otherNode.inputs.begin(), otherNode.inputs.end(), nodeId))
+        {
+            auto &rcount = nodesInputsReady.at(otherNodeId);
+            if(++rcount == otherNode.inputs.size())
+                reachableNodes.insert(otherNodeId);
+        }
     }
 }
 

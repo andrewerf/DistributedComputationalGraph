@@ -68,7 +68,7 @@ void Manager::addNode(const Node &node)
         sendNode(node);
 }
 
-void Manager::setInputValue(TID graphId, TID nodeId, const msgpack::object_bin &data)
+void Manager::setInputValue(TID graphId, TID nodeId, const msgpack::object_bin &data, MetaData md)
 {
     std::unique_lock lock(graphsMutex);
     auto graphIt = graphs.find(graphId);
@@ -78,8 +78,11 @@ void Manager::setInputValue(TID graphId, TID nodeId, const msgpack::object_bin &
 
     // Push data to redis
     std::string redisKey = std::to_string(graphId) + "_" + std::to_string(nodeId);
-    std::string redisValue(data.ptr, data.size);
-    redisServer.set(redisKey, redisValue);
+    redisServer.set(redisKey, std::string(data.ptr, data.size));
+
+    msgpack::sbuffer encodedMeta;
+    msgpack::pack(encodedMeta, md);
+    redisServer.set(redisKey + "_meta", std::string(encodedMeta.data(), encodedMeta.size()));
 
     lock.lock();
     auto &graph = graphIt->second;

@@ -20,7 +20,7 @@ class Manager
     void addGraph(TID id);
     TID addGraphUnique();
     void addNode(const Node &node);
-    void setInputValue(TID grapId, TID nodeId, const msgpack::object_bin &data);
+    void setInputValue(TID graphId, TID nodeId, const msgpack::object_bin &data, MetaData md);
     void setNodeComputed(TID graphId, TID nodeId);
     void sendNode(const Node &node);
 
