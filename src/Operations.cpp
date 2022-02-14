@@ -3,10 +3,6 @@
 #include <iomanip>
 
 
-template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
-
 template <typename T>
 constexpr DataType to_dt()
 {
@@ -101,53 +97,34 @@ TensorWithMeta encodeTensor(VarTensor &&tensor)
     return std::make_pair(std::move(encodedTensor), md);
 }
 
-
-TensorWithMeta SumOp::call(std::vector<TensorWithMeta> &&encodedTensors) const
+TensorWithMeta sumOp(std::vector<TensorWithMeta> &&encodedTensors)
 {
-    std::vector<VarTensor> tensors;
-    std::transform(std::make_move_iterator(encodedTensors.begin()),
-                   std::make_move_iterator(encodedTensors.end()),
-                   std::back_inserter(tensors),
-                   decodeTensor);
-
-    VarTensor result;
-    for(auto &&varTensor : tensors)
-    {
-        result = std::visit(overloaded {
-            [] <typename T, int rank> (Eigen::Tensor<T, rank> &&a, Eigen::Tensor<T, rank> &&b) -> VarTensor
-            {
-                Eigen::Tensor<T, rank> result = a;
-                result += b;
-                return result;
-            },
-            [](auto &&a, auto &&b) -> VarTensor
-            {
-                throw std::logic_error("");
-            }
-        }, std::move(varTensor), std::move(result));
-    }
-
-    return encodeTensor(std::move(result));
+    return reduceOp(std::move(encodedTensors), std::plus<>());
 }
 
-TensorWithMeta SqrOp::call(std::vector<TensorWithMeta> &&encodedTensors) const
+TensorWithMeta prodOp(std::vector<TensorWithMeta> &&encodedTensors)
+{
+    return reduceOp(std::move(encodedTensors), std::multiplies<>());
+}
+
+static constexpr auto powOpImpl =
+    [] <typename T1, int rank1, typename T2>
+    (Eigen::Tensor<T1, rank1> &&a, Eigen::Tensor<T2, 1> &&b) -> Eigen::Tensor<T1, rank1>
+    {return a.pow(b(0));};
+TensorWithMeta powOp(std::vector<TensorWithMeta> &&encodedTensors)
+{
+    if(encodedTensors.size() != 2)
+        throw std::runtime_error("Bad inputs count");
+
+    return reduceOp(std::move(encodedTensors), powOpImpl);
+}
+
+TensorWithMeta sqrOp(std::vector<TensorWithMeta> &&encodedTensors)
 {
     if(encodedTensors.size() != 1)
-        throw std::runtime_error("Sqr should only be called with one tensor");
+        throw std::runtime_error("Bad inputs count");
 
-    VarTensor varTensor = decodeTensor(std::move(encodedTensors[0]));
+    auto t = decodeTensor(std::move(encodedTensors[0]));
 
-    VarTensor result = std::visit(overloaded {
-        [] <typename T, int rank> (Eigen::Tensor<T, rank> &&tensor) -> VarTensor
-        {
-            Eigen::Tensor<T, rank> result = tensor.square();
-            return result;
-        },
-        [](auto &&tensor) -> VarTensor
-        {
-            throw std::logic_error("");
-        }
-    }, std::move(varTensor));
-
-    return encodeTensor(std::move(result));
+    return encodeTensor(magicVisit([] <typename T, int rank> (Eigen::Tensor<T, rank> &&a) -> Eigen::Tensor<T, rank> {return a.pow(2);}, std::move(t)));
 }

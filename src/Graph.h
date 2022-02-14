@@ -60,7 +60,7 @@ class DataIsNotSet : public std::exception
 {
 public:
     const char* what() const noexcept override
-    { "Data is not set"; }
+    { return "Data is not set"; }
 };
 
 

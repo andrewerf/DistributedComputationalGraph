@@ -23,21 +23,47 @@ VarTensor decodeTensor(TensorWithMeta &&tensorWithMeta);
 TensorWithMeta encodeTensor(VarTensor &&tensor);
 
 
-struct Operation
-{
-    virtual TensorWithMeta call(std::vector<TensorWithMeta> &&encodedTensors) const = 0;
-};
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-struct SumOp : public Operation
-{
-    TensorWithMeta call(std::vector<TensorWithMeta> &&encodedTensors) const override;
-};
+TensorWithMeta sumOp(std::vector<TensorWithMeta> &&encodedTensors);
+TensorWithMeta prodOp(std::vector<TensorWithMeta> &&encodedTensors);
+TensorWithMeta powOp(std::vector<TensorWithMeta> &&encodedTensors);
+TensorWithMeta sqrOp(std::vector<TensorWithMeta> &&encodedTensors);
 
-struct SqrOp : public Operation
-{
-    TensorWithMeta call(std::vector<TensorWithMeta> &&encodedTensors) const override;
-};
 
+template <typename ...TArgs>
+VarTensor magicVisit(const auto &func, TArgs&& ...tensors)
+{
+    return std::visit(overloaded {
+        [&func] (auto&& ...args) -> decltype(VarTensor(func(std::move(args)...)))
+        {
+            return func(std::move(args)...);
+        },
+        [](...) -> VarTensor
+        {
+            throw std::runtime_error("Bad args");
+        }
+    }, std::forward<TArgs>(tensors)...);
+}
+
+TensorWithMeta reduceOp(std::vector<TensorWithMeta> &&encodedTensors, const auto &bfunc)
+{
+    std::vector<VarTensor> tensors;
+    tensors.reserve(encodedTensors.size());
+    std::transform(std::make_move_iterator(encodedTensors.begin()),
+                   std::make_move_iterator(encodedTensors.end()),
+                   std::back_inserter(tensors),
+                   decodeTensor);
+
+    VarTensor result = std::move(tensors[0]);
+    for(size_t i = 1; i < tensors.size(); ++i)
+    {
+        result = magicVisit(bfunc, std::move(result), std::move(tensors[i]));
+    }
+
+    return encodeTensor(std::move(result));
+}
 
 
 #endif //DISTRIBUTEDCOMPUTATIONALGRAPH_OPERATIONS_H
