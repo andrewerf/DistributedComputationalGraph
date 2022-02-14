@@ -3,14 +3,22 @@
 #include <iomanip>
 
 
+static constexpr auto sumOpImpl =
+        [] <typename T, int rank>
+        (Eigen::Tensor<T, rank> &&a, Eigen::Tensor<T, rank> &&b) -> Eigen::Tensor<T, rank>
+        {return a + b;};
 TensorWithMeta sumOp(std::vector<TensorWithMeta> &&encodedTensors)
 {
-    return reduceOp(std::move(encodedTensors), std::plus<>());
+    return reduceOp(std::move(encodedTensors), sumOpImpl);
 }
 
+static constexpr auto prodOpImpl =
+    [] <typename T, int rank>
+    (Eigen::Tensor<T, rank> &&a, Eigen::Tensor<T, rank> &&b) -> Eigen::Tensor<T, rank>
+    {return a * b;};
 TensorWithMeta prodOp(std::vector<TensorWithMeta> &&encodedTensors)
 {
-    return reduceOp(std::move(encodedTensors), std::multiplies<>());
+    return reduceOp(std::move(encodedTensors), prodOpImpl);
 }
 
 static constexpr auto powOpImpl =
