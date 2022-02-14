@@ -140,7 +140,8 @@ TensorWithMeta SqrOp::call(std::vector<TensorWithMeta> &&encodedTensors) const
     VarTensor result = std::visit(overloaded {
         [] <typename T, int rank> (Eigen::Tensor<T, rank> &&tensor) -> VarTensor
         {
-            return tensor;
+            Eigen::Tensor<T, rank> result = tensor.square();
+            return result;
         },
         [](auto &&tensor) -> VarTensor
         {

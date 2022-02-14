@@ -56,6 +56,12 @@ private:
     std::string msg;
 };
 
+class DataIsNotSet : public std::exception
+{
+public:
+    const char* what() const noexcept override
+    { "Data is not set"; }
+};
 
 
 class Graph
@@ -108,6 +114,10 @@ void Graph::setReady(TID nodeId)
     auto nodeIt = nodes.find(nodeId);
     if(nodeIt == nodes.end())
         throw NodeDoesNotExist(nodeId);
+
+    auto reachableIt = reachableNodes.find(nodeId);
+    if(reachableIt != reachableNodes.end())
+        reachableNodes.erase(reachableIt);
 
     readyNodes.insert(nodeId);
     for(const auto &[otherNodeId, otherNode] : nodes)

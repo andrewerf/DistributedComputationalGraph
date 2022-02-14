@@ -18,6 +18,8 @@ Manager::Manager(const kafka::Properties &producerProps, int rpcPort, int rpcThr
     rpcServer.bind("setInputValue", [this](TID graphId, TID nodeId, const std::string &data, MetaData md){setInputValue(graphId, nodeId, data, md);});
     rpcServer.bind("addGraphUnique", [this]{return addGraphUnique();});
     rpcServer.bind("setNodeComputed", [this](TID graphId, TID nodeId){setNodeComputed(graphId, nodeId);});
+    rpcServer.bind("getData", [this](TID graphId, TID nodeId){return getData(graphId, nodeId);});
+    rpcServer.bind("getMetaData", [this](TID graphId, TID nodeId){return getMetaData(graphId, nodeId);});
     rpcServer.suppress_exceptions(true);
 
     kafka::clients::AdminClient adminClient(producerProps);
@@ -99,6 +101,7 @@ void Manager::setInputValue(TID graphId, TID nodeId, const std::string &data, Me
 
 void Manager::setNodeComputed(TID graphId, TID nodeId)
 {
+    PLOGV << "setNodeComputed called";
     std::unique_lock lock(graphsMutex);
     auto graphIt = graphs.find(graphId);
     if(graphIt == graphs.end())
@@ -138,4 +141,25 @@ void Manager::sendNode(const Node &node)
         PLOGW << "Could not send Node to kafka: " << e.what();
         std::rethrow_exception(std::current_exception());
     }
+}
+
+std::string Manager::getData(TID graphId, TID nodeId)
+{
+    PLOGV << "getData called";
+    std::string redisKey = std::to_string(graphId) + "_" + std::to_string(nodeId);
+    if(redisServer.exists(redisKey) == 0 /* doesn't exist */)
+        throw DataIsNotSet();
+
+    return redisServer.get(redisKey).value();
+}
+
+MetaData Manager::getMetaData(TID graphId, TID nodeId)
+{
+    PLOGV << "getMetaData called";
+    std::string redisKey = std::to_string(graphId) + "_" + std::to_string(nodeId) + "_meta";
+    if(redisServer.exists(redisKey) == 0 /* doesn't exist */)
+        throw DataIsNotSet();
+
+    auto encodedMeta = redisServer.get(redisKey);
+    return msgpack::unpack(encodedMeta->c_str(), encodedMeta->size()).as<MetaData>();
 }

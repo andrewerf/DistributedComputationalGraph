@@ -64,4 +64,6 @@ void Worker::processNode(const Node &node)
     redisServer.set(redisKey + "_meta", std::string(encodedMeta.data(), encodedMeta.size()));
 
     rpcClient.call("setNodeComputed", node.graphId, node.id);
+
+    PLOGV << "Processed node with id = " << node.id;
 }

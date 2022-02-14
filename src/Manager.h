@@ -24,6 +24,8 @@ public:
     void setInputValue(TID graphId, TID nodeId, const std::string &data, MetaData md);
     void setNodeComputed(TID graphId, TID nodeId);
     void sendNode(const Node &node);
+    std::string getData(TID graphId, TID nodeId);
+    MetaData getMetaData(TID graphId, TID nodeId);
 
 private:
     kafka::clients::KafkaProducer producer;
