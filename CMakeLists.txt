@@ -28,8 +28,11 @@ find_package(Eigen3 3.4 REQUIRED)
 
 set(LIBS modern-cpp-kafka-api plog cxxopts rpc redis++)
 
+add_library(tensor_codecs src/TensorCodecs.cpp)
+target_link_libraries(tensor_codecs rpc Eigen3::Eigen)
+
 add_library(operations src/Operations.cpp)
-target_link_libraries(operations rpc Eigen3::Eigen)
+target_link_libraries(operations rpc Eigen3::Eigen tensor_codecs)
 
 add_executable(manager src/manager.cpp src/Manager.cpp src/common.cpp)
 target_link_libraries(manager ${LIBS})
@@ -38,4 +41,4 @@ add_executable(worker src/worker.cpp src/Worker.cpp src/Operations.cpp src/commo
 target_link_libraries(worker ${LIBS} operations)
 
 add_executable(client src/client.cpp src/Client.cpp src/common.cpp)
-target_link_libraries(client ${LIBS} operations)
+target_link_libraries(client ${LIBS} tensor_codecs)

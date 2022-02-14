@@ -53,7 +53,7 @@ void Worker::processNode(const Node &node)
         encodedTensors.emplace_back(std::move(tensorWithMeta));
     }
 
-    auto result = sqrOp(std::move(encodedTensors));
+    auto result = powOp(std::move(encodedTensors));
 
     std::string redisKey = std::to_string(node.graphId) + '_' + std::to_string(node.id);
     redisServer.set(redisKey, result.first);
