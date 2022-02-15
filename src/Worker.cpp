@@ -8,7 +8,8 @@
 Worker::Worker(const kafka::Properties &consumerProps, const std::string &managerRpcHost, const std::string &redisUri):
     consumer(consumerProps),
     rpcClient(extractHostname(managerRpcHost), extractRpcPort(managerRpcHost)),
-    redisServer(redisUri)
+    redisServer(redisUri),
+    operationsManager(OperationsManager::getInstance())
 {
     consumer.subscribe({"nodes"});
 }
@@ -53,7 +54,8 @@ void Worker::processNode(const Node &node)
         encodedTensors.emplace_back(std::move(tensorWithMeta));
     }
 
-    auto result = powOp(std::move(encodedTensors));
+    auto op = operationsManager->findOperation(node.opId);
+    auto result = op(std::move(encodedTensors));
 
     std::string redisKey = std::to_string(node.graphId) + '_' + std::to_string(node.id);
     redisServer.set(redisKey, result.first);

@@ -2,6 +2,7 @@
 #define DISTRIBUTEDCOMPUTATIONALGRAPH_WORKER_H
 
 #include "Node.h"
+#include "OperationsManager.h"
 
 #include <kafka/KafkaConsumer.h>
 
@@ -23,6 +24,7 @@ private:
     kafka::clients::KafkaConsumer consumer;
     rpc::client rpcClient;
     sw::redis::Redis redisServer;
+    OperationsManager *operationsManager;
 };
 
 #endif //DISTRIBUTEDCOMPUTATIONALGRAPH_WORKER_H
