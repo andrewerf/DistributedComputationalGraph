@@ -8,6 +8,7 @@ TensorWithMeta sumOp(std::vector<TensorWithMeta> &&encodedTensors);
 TensorWithMeta prodOp(std::vector<TensorWithMeta> &&encodedTensors);
 TensorWithMeta powOp(std::vector<TensorWithMeta> &&encodedTensors);
 TensorWithMeta sqrOp(std::vector<TensorWithMeta> &&encodedTensors);
+TensorWithMeta sumAxisOp(std::vector<TensorWithMeta> &&encodedTensors);
 
 
 template <typename ...TArgs>
@@ -25,7 +26,7 @@ VarTensor magicVisit(const auto &func, TArgs&& ...tensors)
     }, std::forward<TArgs>(tensors)...);
 }
 
-TensorWithMeta reduceOp(std::vector<TensorWithMeta> &&encodedTensors, const auto &bfunc)
+TensorWithMeta reduceInputsOp(std::vector<TensorWithMeta> &&encodedTensors, const auto &bfunc)
 {
     std::vector<VarTensor> tensors;
     tensors.reserve(encodedTensors.size());

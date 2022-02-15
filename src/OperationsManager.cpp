@@ -7,7 +7,8 @@ OperationsManager::OperationsManager()
         {"sumOp", sumOp},
         {"prodOp", prodOp},
         {"powOp", powOp},
-        {"sqrOp", sqrOp}
+        {"sqrOp", sqrOp},
+        {"sumAxisOp", sumAxisOp}
     };
 
     for(size_t i = 0; i < operations.size(); ++i)

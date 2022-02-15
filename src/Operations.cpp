@@ -9,7 +9,7 @@ static constexpr auto sumOpImpl =
         {return a + b;};
 TensorWithMeta sumOp(std::vector<TensorWithMeta> &&encodedTensors)
 {
-    return reduceOp(std::move(encodedTensors), sumOpImpl);
+    return reduceInputsOp(std::move(encodedTensors), sumOpImpl);
 }
 
 static constexpr auto prodOpImpl =
@@ -18,7 +18,7 @@ static constexpr auto prodOpImpl =
     {return a * b;};
 TensorWithMeta prodOp(std::vector<TensorWithMeta> &&encodedTensors)
 {
-    return reduceOp(std::move(encodedTensors), prodOpImpl);
+    return reduceInputsOp(std::move(encodedTensors), prodOpImpl);
 }
 
 static constexpr auto powOpImpl =
@@ -30,7 +30,7 @@ TensorWithMeta powOp(std::vector<TensorWithMeta> &&encodedTensors)
     if(encodedTensors.size() != 2)
         throw std::runtime_error("Bad inputs count");
 
-    return reduceOp(std::move(encodedTensors), powOpImpl);
+    return reduceInputsOp(std::move(encodedTensors), powOpImpl);
 }
 
 TensorWithMeta sqrOp(std::vector<TensorWithMeta> &&encodedTensors)
@@ -41,4 +41,25 @@ TensorWithMeta sqrOp(std::vector<TensorWithMeta> &&encodedTensors)
     auto t = decodeTensor(std::move(encodedTensors[0]));
 
     return encodeTensor(magicVisit([] <typename T, int rank> (Eigen::Tensor<T, rank> &&a) -> Eigen::Tensor<T, rank> {return a.pow(2);}, std::move(t)));
+}
+
+TensorWithMeta sumAxisOp(std::vector<TensorWithMeta> &&encodedTensors)
+{
+    if(encodedTensors.size() != 2)
+        throw std::runtime_error("Bad inputs count");
+
+    auto a = decodeTensor(std::move(encodedTensors[0]));
+    auto ax = decodeTensor(std::move(encodedTensors[1]));
+
+    if(!std::holds_alternative<Eigen::Tensor<int32_t, 1>>(ax))
+        throw std::runtime_error("Bad tensor shape");
+
+    return encodeTensor(magicVisit(
+        [] <typename T1, typename T2, int rank> (Eigen::Tensor<T1, rank> &&a, Eigen::Tensor<T2, 1> &&axis) -> Eigen::Tensor<T1, rank - 1>
+        {
+            std::array<int32_t, 1> dims = {axis(0)};
+            return a.sum(dims);
+        },
+        std::move(a), std::move(ax)
+    ));
 }
