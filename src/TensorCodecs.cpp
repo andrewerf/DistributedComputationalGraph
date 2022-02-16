@@ -61,6 +61,8 @@ VarTensor decodeTensor(TensorWithMeta &&tensorWithMeta)
 {
     switch (tensorWithMeta.second.rank)
     {
+        case 0:
+            return decodeTensorR<0>(std::move(tensorWithMeta));
         case 1:
             return decodeTensorR<1>(std::move(tensorWithMeta));
         case 2:

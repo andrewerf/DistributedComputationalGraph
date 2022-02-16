@@ -88,6 +88,8 @@ public:
     auto end() const
     { return reachableNodes.end(); }
 
+    auto nextReachable(auto iter);
+
     const Node& at(TID id) const
     { return nodes.at(id); }
 
@@ -129,6 +131,11 @@ void Graph::setReady(TID nodeId)
                 reachableNodes.insert(otherNodeId);
         }
     }
+}
+
+auto Graph::nextReachable(auto iter)
+{
+    return reachableNodes.erase(iter);
 }
 
 

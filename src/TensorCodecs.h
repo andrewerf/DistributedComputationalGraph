@@ -11,7 +11,8 @@
 using TensorWithMeta = std::pair<std::string, MetaData>;
 
 using VarTensor =
-    std::variant<Eigen::Tensor<int32_t, 1>, Eigen::Tensor<float, 1>,
+    std::variant<Eigen::Tensor<int32_t, 0>, Eigen::Tensor<float, 0>,
+                 Eigen::Tensor<int32_t, 1>, Eigen::Tensor<float, 1>,
                  Eigen::Tensor<int32_t, 2>, Eigen::Tensor<float, 2>,
                  Eigen::Tensor<int32_t, 3>, Eigen::Tensor<float, 3>,
                  Eigen::Tensor<int32_t, 4>, Eigen::Tensor<float, 4>>;

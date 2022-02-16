@@ -1,7 +1,8 @@
 #include "Client.h"
 #include "common.h"
 #include "Node.h"
-#include "Operations.h"
+#include "TensorCodecs.h"
+#include <nlohmann/json.hpp>
 
 #include <rpc/rpc_error.h>
 
@@ -9,28 +10,77 @@
 
 
 Client::Client(const std::string &managerRpcHost):
-    rpcClient(extractHostname(managerRpcHost), extractRpcPort(managerRpcHost))
+    rpcClient(extractHostname(managerRpcHost), extractRpcPort(managerRpcHost)),
+    operationsManager(OperationsManager::getInstance())
 {}
 
-void Client::speak()
+void Client::sendNode(const Node &node)
+{
+    rpcClient.call("addNode", node);
+}
+
+void Client::setInputValue(TID graphId, TID nodeId, const VarTensor &input)
+{
+    VarTensor inputCopy = input;
+    auto encodedTensor = encodeTensor(std::move(inputCopy));
+    rpcClient.call("setInputValue", graphId, nodeId, encodedTensor.first, encodedTensor.second);
+}
+
+VarTensor Client::getOutputValue(TID graphId, TID nodeId)
+{
+    auto meta = rpcClient.call("getMetaData", graphId, nodeId).as<MetaData>();
+    auto encodedTensor = rpcClient.call("getData", graphId, nodeId).as<std::string>();
+    auto ret = decodeTensor(std::make_pair(std::move(encodedTensor), meta));
+    return ret;
+}
+
+std::unordered_map<TID, VarTensor>
+        Client::processGraph(const std::unordered_map<TID, VarTensor> &inputValues,
+                             std::istream &graphStream,
+                             const std::vector<TID> &outputs)
 {
     auto graphId = rpcClient.call("addGraphUnique").as<TID>();
-    Node node{
-        0, graphId, {}, 0
-    };
 
-    rpcClient.call("addNode", node);
+    auto json = nlohmann::json::parse(graphStream);
+    std::vector<Node> nodes;
+    for(const auto &jsonNode : json)
+    {
+        auto nodeId = jsonNode.find("id");
+        auto inputs = jsonNode.find("inputs");
+        auto opName = jsonNode.find("op");
 
-    node.id = 1;
-    node.inputs.push_back(0);
-    rpcClient.call("addNode", node);
+        if(nodeId == jsonNode.end())
+            throw std::runtime_error("Each node must specify id");
 
-    Eigen::Tensor<float, 1> tensor(1);
-    tensor(0) = 15;
+        Node node;
+        nodeId->get_to(node.id);
+        node.graphId = graphId;
 
-    auto encodedTensor = encodeTensor(std::move(tensor));
+        if(inputs == jsonNode.end() && !inputValues.contains(node.id))
+            throw std::runtime_error("Node should either be input or has inputs specified");
 
-    rpcClient.call("setInputValue", graphId, 0, encodedTensor.first, encodedTensor.second);
+        if(inputs != jsonNode.end())
+            inputs->get_to(node.inputs);
+        if(opName != jsonNode.end())
+            node.opId = operationsManager->getOperationId(opName->get<std::string>());
+
+        nodes.push_back(node);
+    }
+
+    for(const auto &node : nodes)
+        sendNode(node);
+
+    for(const auto &[nodeId, input] : inputValues)
+        setInputValue(graphId, nodeId, input);
 
 
+    std::unordered_map<TID, VarTensor> result;
+    for(TID outId : outputs)
+    {
+        while(!rpcClient.call("isComputed", graphId, outId).as<bool>())
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        result.emplace(outId, getOutputValue(graphId, outId));
+    }
+
+    return result;
 }

@@ -26,6 +26,9 @@ add_subdirectory(3rdparty/cxxopts)
 # Eigen
 find_package(Eigen3 3.4 REQUIRED)
 
+# Json
+find_package(nlohmann_json REQUIRED)
+
 set(LIBS modern-cpp-kafka-api plog cxxopts rpc redis++)
 
 add_library(tensor_codecs src/TensorCodecs.cpp)
@@ -41,4 +44,4 @@ add_executable(worker src/worker.cpp src/Worker.cpp src/common.cpp)
 target_link_libraries(worker ${LIBS} operations)
 
 add_executable(client src/client.cpp src/Client.cpp src/common.cpp)
-target_link_libraries(client ${LIBS} tensor_codecs operations)
+target_link_libraries(client ${LIBS} tensor_codecs operations nlohmann_json::nlohmann_json)

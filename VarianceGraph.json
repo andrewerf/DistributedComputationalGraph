@@ -1,0 +1,30 @@
+[
+  {
+    "id": 0
+  },
+  {
+    "id": 1,
+    "inputs": [0],
+    "op": "sqr"
+  },
+  {
+    "id": 2,
+    "inputs": [1],
+    "op": "meanAll"
+  },
+  {
+    "id": 3,
+    "inputs": [0],
+    "op": "meanAll"
+  },
+  {
+    "id": 4,
+    "inputs": [3],
+    "op": "sqr"
+  },
+  {
+    "id": 5,
+    "inputs": [2, 4],
+    "op": "minus"
+  }
+]

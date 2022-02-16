@@ -4,11 +4,14 @@
 OperationsManager::OperationsManager()
 {
     operations = {
-        {"sumOp", sumOp},
-        {"prodOp", prodOp},
-        {"powOp", powOp},
-        {"sqrOp", sqrOp},
-        {"sumAxisOp", sumAxisOp}
+        {"sum", sumOp},
+        {"minus", minusOp},
+        {"prod", prodOp},
+        {"pow", powOp},
+        {"sqr", sqrOp},
+        {"sumAxis", sumAxisOp},
+        {"sumAll", sumAll},
+        {"meanAll", meanAll}
     };
 
     for(size_t i = 0; i < operations.size(); ++i)

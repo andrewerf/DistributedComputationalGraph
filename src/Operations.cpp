@@ -4,13 +4,26 @@
 
 
 static constexpr auto sumOpImpl =
-        [] <typename T, int rank>
-        (Eigen::Tensor<T, rank> &&a, Eigen::Tensor<T, rank> &&b) -> Eigen::Tensor<T, rank>
-        {return a + b;};
+    [] <typename T, int rank>
+    (Eigen::Tensor<T, rank> &&a, Eigen::Tensor<T, rank> &&b) -> Eigen::Tensor<T, rank>
+    {return a + b;};
 TensorWithMeta sumOp(std::vector<TensorWithMeta> &&encodedTensors)
 {
     return reduceInputsOp(std::move(encodedTensors), sumOpImpl);
 }
+
+static constexpr auto minusOpImpl =
+    [] <typename T, int rank>
+    (Eigen::Tensor<T, rank> &&a, Eigen::Tensor<T, rank> &&b) -> Eigen::Tensor<T, rank>
+    {return a - b;};
+TensorWithMeta minusOp(std::vector<TensorWithMeta> &&encodedTensors)
+{
+    if(encodedTensors.size() != 2)
+        throw std::runtime_error("Bad inputs count");
+
+    return encodeTensor(magicVisit(minusOpImpl, decodeTensor(std::move(encodedTensors[0])), decodeTensor(std::move(encodedTensors[1]))));
+}
+
 
 static constexpr auto prodOpImpl =
     [] <typename T, int rank>
@@ -55,11 +68,35 @@ TensorWithMeta sumAxisOp(std::vector<TensorWithMeta> &&encodedTensors)
         throw std::runtime_error("Bad tensor shape");
 
     return encodeTensor(magicVisit(
-        [] <typename T1, typename T2, int rank> (Eigen::Tensor<T1, rank> &&a, Eigen::Tensor<T2, 1> &&axis) -> Eigen::Tensor<T1, rank - 1>
+        [] <typename T1, typename T2, int rank> requires (rank >= 1) (Eigen::Tensor<T1, rank> &&a, Eigen::Tensor<T2, 1> &&axis) -> Eigen::Tensor<T1, rank - 1>
         {
             std::array<int32_t, 1> dims = {axis(0)};
             return a.sum(dims);
         },
         std::move(a), std::move(ax)
     ));
+}
+
+static constexpr auto sumAllImpl =
+    [] <typename T, int rank>
+    (Eigen::Tensor<T, rank> &&a) -> Eigen::Tensor<T, 0>
+    {return a.sum();};
+TensorWithMeta sumAll(std::vector<TensorWithMeta> &&encodedTensors)
+{
+    if(encodedTensors.size() != 1)
+        throw std::runtime_error("Bad inputs count");
+
+    return encodeTensor(magicVisit(sumAllImpl, decodeTensor(std::move(encodedTensors[0]))));
+}
+
+static constexpr auto meanAllImpl =
+    [] <typename T, int rank>
+    (Eigen::Tensor<T, rank> &&a) -> Eigen::Tensor<T, 0>
+    {return a.mean();};
+TensorWithMeta meanAll(std::vector<TensorWithMeta> &&encodedTensors)
+{
+    if(encodedTensors.size() != 1)
+        throw std::runtime_error("Bad inputs count");
+
+    return encodeTensor(magicVisit(meanAllImpl, decodeTensor(std::move(encodedTensors[0]))));
 }

@@ -20,6 +20,7 @@ Manager::Manager(const kafka::Properties &producerProps, int rpcPort, int rpcThr
     rpcServer.bind("setNodeComputed", [this](TID graphId, TID nodeId){setNodeComputed(graphId, nodeId);});
     rpcServer.bind("getData", [this](TID graphId, TID nodeId){return getData(graphId, nodeId);});
     rpcServer.bind("getMetaData", [this](TID graphId, TID nodeId){return getMetaData(graphId, nodeId);});
+    rpcServer.bind("isComputed", [this](TID graphId, TID nodeId){return isComputed(graphId, nodeId);});
     rpcServer.suppress_exceptions(true);
 
     kafka::clients::AdminClient adminClient(producerProps);
@@ -78,7 +79,6 @@ void Manager::setInputValue(TID graphId, TID nodeId, const std::string &data, Me
     auto graphIt = graphs.find(graphId);
     if(graphIt == graphs.end())
         throw GraphDoesNotExist(graphId);
-    lock.unlock();
 
     // Push data to redis
     std::string redisKey = std::to_string(graphId) + "_" + std::to_string(nodeId);
@@ -88,14 +88,13 @@ void Manager::setInputValue(TID graphId, TID nodeId, const std::string &data, Me
     msgpack::pack(encodedMeta, md);
     redisServer.set(redisKey + "_meta", std::string(encodedMeta.data(), encodedMeta.size()));
 
-    lock.lock();
     auto &graph = graphIt->second;
     graph.setReady(nodeId);
 
     // Notify kafka if some node is reachable
-    for(const auto &reachableId : graph)
+    for(auto it = graph.begin(); it != graph.end(); it = graph.nextReachable(it))
     {
-        sendNode(graph.at(reachableId));
+        sendNode(graph.at(*it));
     }
 }
 
@@ -106,20 +105,18 @@ void Manager::setNodeComputed(TID graphId, TID nodeId)
     auto graphIt = graphs.find(graphId);
     if(graphIt == graphs.end())
         throw GraphDoesNotExist(graphId);
-    lock.unlock();
 
     std::string redisKey = std::to_string(graphId) + "_" + std::to_string(nodeId);
     if(redisServer.exists(redisKey) == 0 /* doesn't exist */)
         throw std::runtime_error("Data is not set");
 
-    lock.lock();
     auto &graph = graphIt->second;
     graph.setReady(nodeId);
 
     // Notify kafka if some node is reachable
-    for(const auto &reachableId : graph)
+    for(auto it = graph.begin(); it != graph.end(); it = graph.nextReachable(it))
     {
-        sendNode(graph.at(reachableId));
+        sendNode(graph.at(*it));
     }
 }
 
@@ -162,4 +159,9 @@ MetaData Manager::getMetaData(TID graphId, TID nodeId)
 
     auto encodedMeta = redisServer.get(redisKey);
     return msgpack::unpack(encodedMeta->c_str(), encodedMeta->size()).as<MetaData>();
+}
+
+bool Manager::isComputed(TID graphId, TID nodeId)
+{
+    return graphs.at(graphId).isReady(nodeId);
 }

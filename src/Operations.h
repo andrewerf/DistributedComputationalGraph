@@ -5,10 +5,13 @@
 
 
 TensorWithMeta sumOp(std::vector<TensorWithMeta> &&encodedTensors);
+TensorWithMeta minusOp(std::vector<TensorWithMeta> &&encodedTensors);
 TensorWithMeta prodOp(std::vector<TensorWithMeta> &&encodedTensors);
 TensorWithMeta powOp(std::vector<TensorWithMeta> &&encodedTensors);
 TensorWithMeta sqrOp(std::vector<TensorWithMeta> &&encodedTensors);
 TensorWithMeta sumAxisOp(std::vector<TensorWithMeta> &&encodedTensors);
+TensorWithMeta sumAll(std::vector<TensorWithMeta> &&encodedTensors);
+TensorWithMeta meanAll(std::vector<TensorWithMeta> &&encodedTensors);
 
 
 template <typename ...TArgs>

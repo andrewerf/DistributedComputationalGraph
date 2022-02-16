@@ -26,6 +26,7 @@ public:
     void sendNode(const Node &node);
     std::string getData(TID graphId, TID nodeId);
     MetaData getMetaData(TID graphId, TID nodeId);
+    bool isComputed(TID graphId, TID nodeId);
 
 private:
     kafka::clients::KafkaProducer producer;
