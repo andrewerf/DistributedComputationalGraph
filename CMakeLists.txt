@@ -37,6 +37,7 @@ target_link_libraries(tensor_codecs rpc Eigen3::Eigen)
 
 add_library(operations STATIC src/Operations.cpp src/OperationsManager.cpp)
 target_link_libraries(operations rpc Eigen3::Eigen tensor_codecs)
+target_compile_options(operations PRIVATE -Wno-narrowing)
 
 add_executable(manager src/manager.cpp src/Manager.cpp src/common.cpp)
 target_link_libraries(manager ${LIBS})

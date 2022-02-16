@@ -65,9 +65,11 @@ TID Manager::addGraphUnique()
 void Manager::addNode(const Node &node)
 {
     PLOGV << "addNode called";
-    std::lock_guard lock(graphsMutex);
+    std::unique_lock ulock(graphsMutex);
     auto &graph = graphs.at(node.graphId);
     graph.addNode(node);
+    ulock.unlock();
+    std::shared_lock slock(graphsMutex);
     if(graph.isReachable(node.id))
         sendNode(node);
 }
@@ -75,12 +77,13 @@ void Manager::addNode(const Node &node)
 void Manager::setInputValue(TID graphId, TID nodeId, const std::string &data, MetaData md)
 {
     PLOGV << "setInputValue called";
-    std::unique_lock lock(graphsMutex);
+    std::shared_lock slock(graphsMutex);
     auto graphIt = graphs.find(graphId);
     if(graphIt == graphs.end())
         throw GraphDoesNotExist(graphId);
 
     // Push data to redis
+    slock.unlock();
     std::string redisKey = std::to_string(graphId) + "_" + std::to_string(nodeId);
     redisServer.set(redisKey, std::string(data.c_str(), data.size()));
 
@@ -88,6 +91,7 @@ void Manager::setInputValue(TID graphId, TID nodeId, const std::string &data, Me
     msgpack::pack(encodedMeta, md);
     redisServer.set(redisKey + "_meta", std::string(encodedMeta.data(), encodedMeta.size()));
 
+    std::unique_lock ulock(graphsMutex);
     auto &graph = graphIt->second;
     graph.setReady(nodeId);
 
@@ -101,15 +105,17 @@ void Manager::setInputValue(TID graphId, TID nodeId, const std::string &data, Me
 void Manager::setNodeComputed(TID graphId, TID nodeId)
 {
     PLOGV << "setNodeComputed called";
-    std::unique_lock lock(graphsMutex);
+    std::shared_lock slock(graphsMutex);
     auto graphIt = graphs.find(graphId);
     if(graphIt == graphs.end())
         throw GraphDoesNotExist(graphId);
 
+    slock.unlock();
     std::string redisKey = std::to_string(graphId) + "_" + std::to_string(nodeId);
     if(redisServer.exists(redisKey) == 0 /* doesn't exist */)
         throw std::runtime_error("Data is not set");
 
+    std::unique_lock ulock(graphsMutex);
     auto &graph = graphIt->second;
     graph.setReady(nodeId);
 
@@ -163,5 +169,6 @@ MetaData Manager::getMetaData(TID graphId, TID nodeId)
 
 bool Manager::isComputed(TID graphId, TID nodeId)
 {
+    std::shared_lock slock(graphsMutex);
     return graphs.at(graphId).isReady(nodeId);
 }
