@@ -34,7 +34,8 @@ int main(int argc, char** argv)
 
     kafka::Properties properties({
         {"bootstrap.servers", args["kafka_host"].as<std::string>()},
-        {"enable.auto.commit", "true"}
+        {"enable.auto.commit", "true"},
+        {"group.id", "0"}
     });
 
 
